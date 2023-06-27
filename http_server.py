@@ -85,6 +85,10 @@ def do_synthesis(samples, sample_rate, singer_name):
     logger.debug('Generating waveform...')
 
     audio = synthesis_audios(vocoder_model, y_pred, cfg)
+    volume_peak=0.9
+    ratio = volume_peak / max(audio.max(), abs(audio.min()))
+    audio = audio * ratio
+
     logger.debug('synthesis waveform finished')
     end_time = time.time()
     logger.debug('Using time: %f', end_time - start_time)
@@ -119,10 +123,9 @@ class apiHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         sample_rate = json_obj["sample_rate"]
         singer_name = json_obj["singer_name"]
         samples = np.frombuffer(decoded_binary, dtype=np.int16)
-        print("samples:", samples, "sample_rate:", sample_rate, "singer_name:", singer_name)
         converted_audio, err_msg = do_synthesis(samples, sample_rate, singer_name)
+        converted_audio = converted_audio * 32768
         converted_audio = converted_audio.astype(np.int16)
-        print("converted_audio:", converted_audio)
         pcm_bytes = converted_audio.tobytes()
         base64_str = base64.b64encode(pcm_bytes)  
         response_str = json.dumps({"sample_rate": "24000", "data": base64_str.decode(), "err_msg":err_msg})

@@ -5,6 +5,8 @@ from tqdm import tqdm
 import numpy as np
 import json
 import glob
+import time
+import librosa
 
 from modules import whisper_extractor as whisper
 
@@ -44,8 +46,9 @@ def whisper_encoder(model, audio_path):
 
 def whisper_encoder_samples(model, samples, sample_rate):
     batch_mel = torch.zeros((1, 80, 3000), dtype=torch.float32, device=model.device)
-
     audio = samples.flatten().astype(np.float32) / 32768.0
+    audio = librosa.resample(audio, orig_sr=sample_rate, target_sr=16000)
+    print("whisper audio:", audio)
     # audio = whisper.load_audio(audio_paths)
     audio = whisper.pad_or_trim(audio)
 

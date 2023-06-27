@@ -42,6 +42,23 @@ def whisper_encoder(model, audio_path):
 
     return features.cpu().detach().numpy()
 
+def whisper_encoder_samples(model, samples, sample_rate):
+    batch_mel = torch.zeros((1, 80, 3000), dtype=torch.float32, device=model.device)
+
+    audio = samples.flatten().astype(np.float32) / 32768.0
+    # audio = whisper.load_audio(audio_paths)
+    audio = whisper.pad_or_trim(audio)
+
+    # (80, 3000)
+    mel = whisper.log_mel_spectrogram(audio).to(model.device)
+    batch_mel[0] = mel
+
+    with torch.no_grad():
+        # (batch, 1500, 1024)
+        features = model.embed_audio(batch_mel).squeeze(0)
+
+    return features.cpu().numpy()
+
 
 def get_mapped_whisper_features(
     raw_whisper_features, mapping_features, fast_mapping=True
@@ -167,3 +184,12 @@ def extract_whisper_features_of_dataset(
             np.save(save_path, raw_whisper_feature)
 
         print("{}/{} Done...".format(end, len(audio_paths)))
+    return whisper_feature_aligned
+
+def whisper_feature_extractor_samples(whisper_model, samples, sample_rate, mel, cfg):
+    whisper_feature = whisper_encoder_samples(whisper_model, samples, sample_rate)
+
+    # Mapping to acoustic features' lengths
+    whisper_feature_aligned = get_mapped_whisper_features(whisper_feature, mel)
+
+    return whisper_feature_aligned

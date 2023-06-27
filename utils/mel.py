@@ -2,6 +2,7 @@ import torch
 import numpy as np
 
 import torch.nn.functional as F
+from utils.audio import load_audio_torch, load_audio_samples
 from librosa.filters import mel as librosa_mel_fn
 
 # from cuhkszsvc.extractor.acoustics.utils.audio import load_audio_torch
@@ -22,10 +23,6 @@ def dynamic_range_compression_torch(x, C=1, clip_val=1e-5):
 # def dynamic_range_decompression_torch(x, C=1):
 #     return torch.exp(x) / C
 
-
-def spectral_normalize_torch(magnitudes):
-    output = dynamic_range_compression_torch(magnitudes)
-    return output
 
 
 # def spectral_de_normalize_torch(magnitudes):
@@ -113,6 +110,96 @@ def spectral_normalize_torch(magnitudes):
 #         audio, fs = load_audio_torch(wave_file, self.fs)
 #         spect = self.get_mel(audio.unsqueeze(0)).squeeze(0)
 #         return spect
+def spectral_de_normalize_torch(magnitudes):
+    output = dynamic_range_decompression_torch(magnitudes)
+    return output
+
+
+class STFT:
+    def __init__(
+        self, fs, n_mels, n_fft, win_length, hop_length, fmin, fmax, clip_val=1e-5
+    ):
+        self.fs = fs
+        self.n_mels = n_mels
+        self.n_fft = n_fft
+        self.win_length = win_length
+        self.hop_length = hop_length
+        self.fmin = fmin
+        self.fmax = fmax
+        self.clip_val = clip_val
+
+        self.mel_basis = {}
+        self.hann_window = {}
+
+    def get_mel(self, y, keyshift=0, speed=1, center=False):
+        factor = 2 ** (keyshift / 12)
+        n_fft_new = int(np.round(self.n_fft * factor))
+        win_length_new = int(np.round(self.win_length * factor))
+        hop_length_new = int(np.round(self.hop_length * factor))
+
+        mel_basis_key = str(self.fmax) + "_" + str(y.device)
+        if mel_basis_key not in self.mel_basis:
+            mel = librosa_mel_fn(
+                sr=self.fs,
+                n_fft=self.n_fft,
+                n_mels=self.n_mels,
+                fmin=self.fmin,
+                fmax=self.fmax,
+            )
+            self.mel_basis[mel_basis_key] = torch.from_numpy(mel).float().to(y.device)
+
+        keyshift_key = str(keyshift) + "_" + str(y.device)
+        if keyshift_key not in self.hann_window:
+            self.hann_window[keyshift_key] = torch.hann_window(win_length_new).to(
+                y.device
+            )
+
+        y = torch.nn.functional.pad(
+            y.unsqueeze(1),
+            (
+                (win_length_new - hop_length_new) // 2,
+                (win_length_new - hop_length_new + 1) // 2,
+            ),
+            mode="reflect",
+        )
+        y = y.squeeze(1)
+
+        spec = torch.stft(
+            y,
+            n_fft_new,
+            hop_length=hop_length_new,
+            win_length=win_length_new,
+            window=self.hann_window[keyshift_key],
+            center=center,
+            pad_mode="reflect",
+            normalized=False,
+            onesided=True,
+            return_complex=False,
+        )
+
+        spec = torch.sqrt(spec.pow(2).sum(-1) + (1e-9))
+        if keyshift != 0:
+            size = self.n_fft // 2 + 1
+            resize = spec.size(1)
+            if resize < size:
+                spec = F.pad(spec, (0, 0, 0, size - resize))
+            spec = spec[:, :size, :] * self.win_length / win_length_new
+
+        spec = torch.matmul(self.mel_basis[mel_basis_key], spec)
+
+        spec = dynamic_range_compression_torch(spec, clip_val=self.clip_val)
+
+        return spec
+
+    def __call__(self, wave_file):
+        audio, fs = load_audio_torch(wave_file, self.fs)
+        spect = self.get_mel(audio.unsqueeze(0)).squeeze(0)
+        return spect
+    
+    def __call__(self, samples, sample_rate):
+        audio, fs = load_audio_samples(samples, sample_rate, tgt_fs)
+        spect = self.get_mel(audio.unsqueeze(0)).squeeze(0)
+        return spect
 
 
 mel_basis = {}

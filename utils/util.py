@@ -323,6 +323,14 @@ def register_model_to_ema(model, ema):
         if param.requires_grad:
             ema.register(name, param.data)
 
+def get_singer_id(cfg, singer_name):
+    with open(cfg.singer_file, "r") as f:
+        singer_lut = json.load(f)
+    singer_id = -1
+    if singer_name in singer_lut.keys():
+        singer_id = np.array([singer_lut[singer_name] ], dtype=np.int32)         
+    return singer_id
+    
 
 class YParams(HParams):
     def __init__(self, yaml_file):

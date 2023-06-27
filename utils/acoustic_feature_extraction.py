@@ -14,6 +14,7 @@ import numpy as np
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from utils.mel import extract_mel_features
+from utils.mel import extract_mel_features_from_samples
 from utils.f0 import get_f0_features_using_parselmouth
 
 
@@ -57,6 +58,14 @@ def pitch_shift(raw_f0, cfg):
 def acoutic_feature_extractor(wav_file, cfg):
     # mel: # [n_mel, T]                                
     audio, mel, energy = extract_mel_features(wav_file, cfg)
+    f0, _ = get_f0_features_using_parselmouth(audio, mel.shape[-1], cfg)
+
+    mel_norm_features = normalize_mel_channel(mel, cfg) # [n_mel, T]
+    return mel.T, f0, energy
+
+def acoutic_feature_extractor_from_samples(samples, sample_rate, cfg):
+    # mel: # [n_mel, T]                                
+    audio, mel, energy = extract_mel_features_from_samples(samples, sample_rate, cfg)
     f0, _ = get_f0_features_using_parselmouth(audio, mel.shape[-1], cfg)
 
     mel_norm_features = normalize_mel_channel(mel, cfg) # [n_mel, T]

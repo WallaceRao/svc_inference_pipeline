@@ -10,7 +10,7 @@ FilePath: /worksapce/svc_inference_pipline_bk/utils/mel.py
 
 import numpy as np
 import torch
-from utils.audio import load_audio_torch
+from utils.audio import load_audio_torch, load_audio_samples
 from librosa.filters import mel as librosa_mel_fn
 
 
@@ -120,6 +120,11 @@ class STFT:
         audio, fs = load_audio_torch(wave_file, self.fs)
         spect = self.get_mel(audio.unsqueeze(0)).squeeze(0)
         return spect
+    
+    def __call__(self, samples, sample_rate):
+        audio, fs = load_audio_samples(samples, sample_rate, tgt_fs)
+        spect = self.get_mel(audio.unsqueeze(0)).squeeze(0)
+        return spect
 
 
 mel_basis = {}
@@ -182,6 +187,31 @@ def extract_mel_features(
 ):
     with torch.no_grad():
         audio, _ = load_audio_torch(wave_file, cfg.fs)
+
+        ## mel: [n_mel, T]
+        mel = mel_spectrogram(
+            y=audio.unsqueeze(0),
+            n_fft=cfg.n_fft,
+            num_mels=cfg.n_mels,
+            sampling_rate=cfg.fs,
+            hop_size=cfg.hop_length,
+            win_size=cfg.win_length,
+            fmin=cfg.fmin,
+            fmax=cfg.fmax,
+            center=False,
+        ).squeeze(0)
+
+        energy = (mel.exp() ** 2).sum(0).sqrt()  ## [T]
+
+    return audio.cpu(), mel.cpu().numpy(), energy.cpu().numpy()
+
+def extract_mel_features_from_samples(
+    samples,
+    sample_rate,
+    cfg,
+):
+    with torch.no_grad():
+        audio, fs = load_audio_samples(samples, sample_rate, cfg.fs)
 
         ## mel: [n_mel, T]
         mel = mel_spectrogram(

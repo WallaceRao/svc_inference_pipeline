@@ -49,8 +49,9 @@ def pack_data(data, device):
 def get_singer_id(cfg, singer_name):
     with open(cfg.singer_file, "r") as f:
         singer_lut = json.load(f)
-    singer_id = np.array([singer_lut[singer_name] ], dtype=np.int32)  
-                             
+    singer_id = -1
+    if singer_name in singer_lut.keys():
+        singer_id = np.array([singer_lut[singer_name] ], dtype=np.int32)         
     return singer_id
 
 

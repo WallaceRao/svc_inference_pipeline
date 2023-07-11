@@ -112,19 +112,19 @@ def p_sample_plms(x, t, interval, cond, clip_denoised=True, repeat_noise=False):
 
         return x_pred
 
-    noise_pred = denoise_fn(x.transpose(-1, -2).squeeze(1), cond, t.unsqueeze(1))
+    noise_pred, stats = denoise_fn(x.transpose(-1, -2).squeeze(1), cond, t.unsqueeze(1))
     noise_pred = noise_pred.transpose(-1, -2).unsqueeze(1)
 
     if len(noise_list) == 0:
         x_pred = get_x_pred(x, noise_pred, t)
-        # noise_pred_prev = denoise_fn(x_pred, max(t - interval, 0), cond=cond)
+        # noise_pred_prev, stats = denoise_fn(x_pred, max(t - interval, 0), cond=cond)
 
         b = len(t)
         _t = torch.full(
             (b,), max(t[0] - interval, 0), device=t.device, dtype=torch.long
         )
 
-        noise_pred_prev = denoise_fn(
+        noise_pred_prev, stats = denoise_fn(
             x_pred.transpose(-1, -2).squeeze(1), cond, _t.unsqueeze(1)
         )
         noise_pred_prev = noise_pred_prev.transpose(-1, -2).unsqueeze(1)
@@ -148,7 +148,7 @@ def p_sample_plms(x, t, interval, cond, clip_denoised=True, repeat_noise=False):
     x_prev = get_x_pred(x, noise_pred_prime, t)
     noise_list.append(noise_pred)
 
-    return x_prev
+    return x_prev, stats
 
 
 def svc_model_inference(model, batch, cfg, fast_inference=False, speedup=10):
@@ -223,7 +223,7 @@ def svc_model_inference(model, batch, cfg, fast_inference=False, speedup=10):
                 desc="sample time step",
                 total=t // iteration_interval,
             ):
-                x = p_sample_plms(
+                x, stats = p_sample_plms(
                     x,
                     torch.full((b,), i, device=device, dtype=torch.long),
                     iteration_interval,

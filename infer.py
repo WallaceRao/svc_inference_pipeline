@@ -1,10 +1,10 @@
 '''
 Author: lmxue
 Date: 2023-06-09 14:20:08
-LastEditTime: 2023-06-11 08:07:56
+LastEditTime: 2023-07-11 18:51:48
 LastEditors: lmxue
 Description: 
-FilePath: /worksapce/svc_inference_pipline/infer.py
+FilePath: /svc_inference_pipeline/infer.py
 @Email: xueliumeng@gmail.com
 '''
 
@@ -25,7 +25,7 @@ import pickle
 ######################## IO Path ####################
 wav_file = "./test_set/1100000814.wav"
 singer_name = 'svcc_CDF1'
-save_path = "./gen/1100000814_svcc_CDF1.wav"
+save_path = "./gen/1100000814_svcc_CDF1_fast_inference.wav"
 
 
 ######################## Load Configuration File ####################
@@ -76,7 +76,7 @@ model_input = pack_data(input_data, cfg.device)
 ######################## Converion ####################
 print('Converion...')
 
-y_pred = svc_model_inference(svc_model, model_input, cfg) # [n_mel, T]
+y_pred = svc_model_inference(svc_model, model_input, cfg, fast_inference=True) # [n_mel, T]
 y_pred = denormalize_mel_channel(y_pred, cfg)  # [n_mel, T]
 
 

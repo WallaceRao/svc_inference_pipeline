@@ -1,0 +1,13 @@
+tqdm
+pyyaml
+ffmpeg-python==0.2.0
+six
+transformers
+fairseq
+librosa
+praat-parselmouth
+torchcrepe
+pyworld
+json5==0.9.5
+einops
+diffusers

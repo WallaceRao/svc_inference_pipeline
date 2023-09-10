@@ -1,0 +1,128 @@
+{
+  "base_config": "config/base.json",
+  "model_type": "DiffSVC",
+  "dataset": [
+    "opencpop"
+  ],
+  "preprocess": {
+    // acoustic features
+    "extract_mel": true,
+    "mel_min_max_norm": true,
+    "extract_pitch": true,
+    "pitch_extractor": "parselmouth",
+    "extract_energy": true,
+    // content features
+    "extract_whisper_feature": false,
+    "extract_contentvec_feature": true,
+    "extract_wenet_feature": false,
+    "extract_mert_feature": false,
+    "content_sample_rate": 16000,
+    // Default config for whisper
+    "whisper_model": "medium",
+    "whisper_batch_size": 1,
+    "whisper_frameshift": 0.01,
+    "whisper_downsample_rate": 2,
+    // Default config for content vector
+    "contentvec_file": "/mnt/workspace/zhangxueyao/SVC/Singing-Voice-Conversion-System/cuhkszsvc/extractor/content/hubert/checkpoint_best_legacy_500.pt",
+    "contentvec_frameshift": 0.02,
+    "contentvec_batch_size": 1,
+    // Default config for mert
+    "mert_model": "m-a-p/MERT-v1-330M",
+    "mert_feature_layer": -1,
+    "mert_hop_size": 320, // 24k
+    "mert_frameshit": 0.01333,
+    "wenet_model_path": "",
+    "wenet_config": "",
+    "wenet_frameshift": 0.01, // 10ms
+    "wenet_downsample_rate": 4, // wenetspeech is 4, gigaspeech is 6
+    "wenet_batch_size": 1,
+    // Default config
+    "n_mel": 100,
+    "win_size": 1024, // todo
+    "hop_size": 256,
+    "sample_rate": 24000,
+    "n_fft": 1024, // todo
+    "fmin": 0,
+    "fmax": 12000, // todo
+    "f0_min": 50, // ~C2
+    "f0_max": 1100, //1100,    // ~C6(1100), ~G5(800)
+    "pitch_bin": 256,
+    "pitch_max": 1100.0,
+    "pitch_min": 50.0,
+    "is_label": true,
+    "is_mu_law": true,
+    "bits": 8,
+    "mel_min_max_stats_dir": "mel_min_max_stats",
+    "whisper_dir": "whisper",
+    "contentvec_dir": "contentvec",
+    "wenet_dir": "wenet",
+    "mert_dir": "mert",
+    "spk2id": "spk2id.json",
+    "utt2spk": "utt2spk",
+    // Features used for model training
+    "use_mel": true,
+    "use_min_max_norm_mel": true,
+    "use_frame_pitch": true,
+    "use_frame_energy": true,
+    "use_log_scale_pitch": false,
+    "use_log_scale_energy": false,
+    "use_spkid": true,
+    "use_whisper": false,
+    "use_contentvec": false,
+    "use_mert": false,
+    "use_wenet": false,
+  },
+  "model": {
+    "condition_encoder": {
+      "merge_mode": "add",
+      "input_melody_dim": 1,
+      "use_log_f0": true,
+      "n_bins_melody": 256, //# Quantization (0 for not quantization)
+      "output_melody_dim": 384,
+      "input_loudness_dim": 1,
+      "use_log_loudness": true,
+      "n_bins_loudness": 256,
+      "output_loudness_dim": 384,
+      // ****** Note by Xueyao: move these configs to exp_config.json (make the users know that)
+      // "use_whisper": true,
+      // "use_contentvec": false,
+      // "use_wenet": false,
+      // "use_mert": false,
+      // "whisper_dim": 1024,
+      // "contentvec_dim": 256,
+      // "mert_dim": 256,
+      // "wenet_dim": 512,
+      "content_encoder_dim": 384,
+      "output_singer_dim": 384,
+      "singer_table_size": 512,
+      "output_content_dim": 384,
+      "use_spkid": true,
+    },
+    "diffusion": {
+      "noise_schedule_factors": [
+        1.0e-4,
+        0.02,
+        1000
+      ], // Follow diff-svc repo
+      "diffusion_fc_size": 128, // Diffwave: 512, DiffSVC repo: 128
+      "n_mel": 100,
+      "residual_channels": 384, // DiffSVC paper: 256, DiffSVC repo: 384
+      "conditioner_size": 384, // conditioner_size: 384
+      "dilation_cycle_length": 4, // DiffSVC paper: 1 (not use dilation), DiffSVC repo: 4
+      "residual_layers": 20,
+      "residual_kernel_size": 3,
+      "use_register_embedding": true
+    },
+  },
+  "train": {
+    "lronPlateau": {
+      "factor": 0.9,
+      "patience": 50,
+      "min_lr": 2.0e-4,
+      "verbose": true,
+    },
+    "adam": {
+      "lr": 4.0e-4,
+    },
+  }
+}

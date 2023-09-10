@@ -1,0 +1,22 @@
+{
+  "base_config": "egs/svc/opencpop/exp_config_base.json",
+  "dataset": [
+    "opencpop",
+  ],
+  "dataset_path": {
+    // Your path to datasets
+    "opencpop": "/mnt/workspace/zhangxueyao/SVC/dataset/2022-InterSpeech-Opencpop",
+  },
+  "preprocess": {
+    // Specify the output root path to save the processed data 
+    "processed_dir": "/mnt/workspace/zoulexiao/Amphion/processed_data",
+    // Specify the ContentVec pretrained checkpoint file
+    "contentvec_file": "/mnt/workspace/zhangxueyao/SVC/Singing-Voice-Conversion-System/cuhkszsvc/extractor/content/hubert/checkpoint_best_legacy_500.pt",
+    // Specify the Wenet pretrained checkpoint file and config file
+    "wenet_config": "/mnt/data/oss_beijing/pjlab-3090-openmmlabpartner/xueliumeng.p/data/pretrained_model/wenet/wenetspeech/20220506_u2pp_conformer_exp/train.yaml",
+    "wenet_model_path": "/mnt/data/oss_beijing/pjlab-3090-openmmlabpartner/xueliumeng.p/data/pretrained_model/wenet/wenetspeech/20220506_u2pp_conformer_exp/final.pt",
+  
+  },
+  // Specify the output root path to save model ckpts and logs
+  "log_dir": "/mnt/workspace/zoulexiao/Amphion/logs"
+}

@@ -1,0 +1,24 @@
+{
+    "dataset_path": {
+        // TTS dataset
+        "LJSpeech": "/mnt/workspace/chenxi/datasets/LibriTTS/raw/LibriTTS/train-clean-100",
+        "LibriTTS": "/mnt/workspace/chenxi/datasets/LibriTTS/raw",
+        // "biaobei": "",
+        // singing dataset
+        "opencpop": "/mnt/workspace/zhangxueyao/SVC/dataset/2022-InterSpeech-Opencpop",
+        "m4singer": "/mnt/workspace/zhangxueyao/SVC/dataset/2022-Neurips-M4Singer",
+        "svcc": "/mnt/workspace/zhangxueyao/SVC/dataset/2023-SVCC2023Dataset",
+        "svcceval": "/mnt/workspace/zhangxueyao/SVC/dataset/2023-SVCC2023DatasetEvaluation",
+        "pjs": "/mnt/workspace/zhangxueyao/SVC/dataset/2020-APSIPA-PJS",
+        "opensinger": "/mnt/workspace/zhangxueyao/SVC/dataset/2021-MM-OpenSinger",
+        "popbutfy": "/mnt/workspace/zhangxueyao/SVC/dataset/2022-ACL-PopBuTFy/data",
+        "nus48e": "/mnt/workspace/zhangxueyao/SVC/dataset/2013-APSIPA-NUS-48E",
+        "popcs": "/mnt/workspace/zhangxueyao/SVC/dataset/2022-AAAI-PopCS/popcs",
+        "kising": "/mnt/workspace/zhangxueyao/SVC/dataset/2021-KiSing/clean",
+        "csd": "/mnt/workspace/zhangxueyao/SVC/dataset/2020-ISMIR-CSD",
+        "opera": "/mnt/workspace/zhangxueyao/SVC/dataset/2014-ICMPC-Opera/monophonic",
+        "vctk": "/mnt/workspace/zhangxueyao/SVC/dataset/VCTK",
+        "lijian": "/mnt/workspace/zhangxueyao/SVC/dataset/LiJian",
+        "cdmusiceval": "/mnt/workspace/zhangxueyao/SVC/dataset/CDMusicEval",
+    },
+}

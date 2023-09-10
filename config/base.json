@@ -1,0 +1,106 @@
+{
+  "base_config": "config/dataset_path.json",
+  "supported_model_type": [
+    "Fastspeech2",
+    "DiffSVC",
+    "Transformer",
+    "EDM",
+    "CD"
+  ],
+  "dataset": [
+    "opencpop"
+  ],
+  "preprocess": {
+    // trim audio silence
+    "trim_silence": false,
+    "num_silent_frames": 8,
+    "trim_fft_size": 512, // fft size used in trimming
+    "trim_hop_size": 128, // hop size used in trimming
+    "trim_top_db": 30, // top db used in trimming sensitive to each dataset
+    // acoustic features
+    "extract_mel": false,
+    "extract_mcep": false,
+    "extract_pitch": true,
+    "extract_uv": true,
+    "extract_audio": false,
+    "extract_label": false,
+    "pitch_extractor": "parselmouth", // pyin, dio, pyworld, pyreaper, parselmouth, CWT (Continuous Wavelet Transform)
+    "extract_energy": true,
+    "mel_min_max_norm": false,
+    "mu_law_norm": false,
+    // content features
+    "extract_whisper_feature": false,
+    "extract_contentvec_feature": false,
+    "extract_mert_feature": false,
+    "extract_wenet_feature": false,
+    // Settings for data preprocessing
+    "n_mel": 80,
+    "win_size": 480,
+    "hop_size": 120,
+    "sample_rate": 24000,
+    "n_fft": 1024,
+    "fmin": 0,
+    "fmax": 12000,
+    "min_level_db": -115,
+    "ref_level_db": 20,
+    "bits": 8,
+    // Directory names of processed data or extracted features
+    "processed_dir": "processed_data",
+    "trimmed_wav_dir": "trimmed_wavs", // directory name of silence trimed wav
+    "wav_dir": "wavs", // directory name of processed wav (such as downsampled waveform)
+    "audio_dir": "audios",
+    "label_dir": "labels",
+    "mel_dir": "mels", // directory name of extraced mel features
+    "mcep_dir": "mcep", // directory name of extraced mcep features
+    "dur_dir": "durs",
+    "lab_dir": "labs", // directory name of extraced label features
+    "wenet_dir": "wenet", // directory name of extraced wenet features
+    "contentvec_dir": "contentvec", // directory name of extraced wenet features
+    "pitch_dir": "pitches", // directory name of extraced pitch features
+    "energy_dir": "energys", // directory name of extracted energy features
+    "uv_dir": "uvs", // directory name of extracted unvoiced features
+    "duration_dir": "duration", // ground-truth duration file
+    "phone_seq_file": "phone_seq_file", // phoneme sequence file
+    "file_lst": "file.lst",
+    "train_file": "train.lst", // training set, the json file contains detailed information about the dataset, including dataset name, utterance id, duration of the utterance
+    "valid_file": "valid.lst", // validattion set
+    "spk2id": "spk2id.json", // used for multi-speaker dataset
+    "utt2spk": "utt2spk", // used for multi-speaker dataset
+    "emo2id": "emo2id.json", // used for multi-emotion dataset
+    "utt2emo": "utt2emo", // used for multi-emotion dataset
+    // Features used for model training
+    "use_phn_seq": false,
+    "use_lab": false,
+    "use_mel": false,
+    "use_wav": false,
+    "use_phone_pitch": false,
+    "use_log_scale_pitch": false,
+    "use_phone_energy": false,
+    "use_phone_duration": false,
+    "use_log_scale_energy": false,
+    "use_wenet": false,
+    "use_dur": false,
+    "use_spkid": false, // True: use speaker id for multi-speaker dataset
+    "use_emoid": false, // True: use emotion id for multi-emotion dataset
+    "use_frame_pitch": true,
+    "use_uv": true,
+    "use_frame_energy": false,
+    "use_frame_duration": false,
+    "use_audio": false,
+    "use_label": false,
+    "use_one_hot": false
+  },
+  "train": {
+    "ddp": true,
+    "random_seed": 970227,
+    "batch_size": 16,
+    "epochs": 50000,
+    "max_steps": 1000000,
+    "total_training_steps": 50000,
+    "save_summary_steps": 500,
+    "save_checkpoints_steps": 10000,
+    "valid_interval": 10000,
+    "keep_checkpoint_max": 5,
+    "multi_speaker_training": false, // True: train multi-speaker model; False: training single-speaker model;
+  },
+}

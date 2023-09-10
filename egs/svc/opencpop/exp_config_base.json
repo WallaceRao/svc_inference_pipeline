@@ -1,0 +1,57 @@
+{
+  "base_config": "config/diffsvc.json",
+  "model_type": "DiffSVC",
+  "dataset": [
+    "opencpop"
+  ],
+  "preprocess": {
+    "extract_mel": true,
+    "extract_pitch": true,
+    "extract_energy": true,
+    "extract_whisper_feature": false,
+    "extract_contentvec_feature": true,
+    "extract_mert_feature": false,
+    "extract_wenet_feature": false,
+    "whisper_batch_size": 30,
+    "contentvec_batch_size": 1,
+    // Dataset: acoustic config
+    "use_mel": true,
+    "use_min_max_norm_mel": true,
+    "use_frame_pitch": true,
+    "use_frame_energy": true,
+    "use_spkid": true,
+    // Dataset: content features
+    "use_whisper": false,
+    "use_contentvec": true,
+    "use_mert": false,
+    "use_wenet": false,
+    "train_file": "train.json",
+    "valid_file": "test.json",
+    "spk2id": "singers.json",
+    "utt2spk": "utt2singer",
+    "n_mel": 100,
+    "sample_rate": 24000
+  },
+  "model": {
+    "condition_encoder": {
+      "use_whisper": false,
+      "use_contentvec": true,
+      "use_mert": false,
+      "use_wenet": false,
+      "whisper_dim": 1024,
+      "contentvec_dim": 256,
+      "mert_dim": 256,
+      "wenet_dim": 512,
+      "use_singer_encoder": true,
+    }
+  },
+  "train": {
+    "batch_size": 64,
+    "ddp": false,
+    "epochs": 50000000000,
+    "max_steps": 160000,
+    "save_summary_steps": 10000,
+    "save_checkpoints_steps": 10000,
+    "valid_interval": 10000
+  }
+}

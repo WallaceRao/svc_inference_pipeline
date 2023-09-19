@@ -374,6 +374,7 @@ def tensorize(data, device, n_samples):
 
 def synthesis(
     vocoder_name,
+    vocoder,
     cfg,
     vocoder_weight_file,
     # dataset_name,
@@ -405,9 +406,9 @@ def synthesis(
     #     return
 
     # ====== Loading neural vocoder model ======
-    vocoder = load_nnvocoder(
-        cfg, vocoder_name, weights_file=vocoder_weight_file, from_multi_gpu=True
-    )
+    #vocoder = load_nnvocoder(
+    #    cfg, vocoder_name, weights_file=vocoder_weight_file, from_multi_gpu=True
+    #)
     device = next(vocoder.parameters()).device
 
     # ====== Inference for predicted acoustic features ======

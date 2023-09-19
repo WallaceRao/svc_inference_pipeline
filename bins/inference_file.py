@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from models.svc.diffsvc.diffsvc_inference import DiffSVCInference
 from models.svc.transformer.transformer_inference import TransformerInference
-from models.vocoders.vocoder_inference import synthesis
+from models.vocoders.vocoder_inference import synthesis,load_nnvocoder
 from processors.content_extractor import (
     ContentvecExtractor,
     WenetExtractor,
@@ -45,13 +45,13 @@ def build_parser():
     parser.add_argument(
         "--acoustics_dir",
         type=str,
-        required=True,
+        required=False,
         help="Acoustics model checkpoint directory.",
     )
     parser.add_argument(
         "--vocoder_dir",
         type=str,
-        required=True,
+        required=False,
         help="Vocoder checkpoint directory.",
     )
     parser.add_argument(
@@ -75,39 +75,29 @@ def build_parser():
     return parser
 
 
-def args2config(args):
+def args2config(work_dir, audio_dir, output_dir):
     r"""Parse inference config into model configs"""
+    exp_name="zoulexiao_opencpop_DDPM_contentvec_conformer"
+    log_dir="/workspace2/lmxue/data/svc/"
+    acoustics_dir = log_dir + "/" + exp_name
+    vocoder_dir  = "/workspace2/lmxue/data/vocoder/resume_bigdata_mels_24000hz-audio_bigvgan_bigvgan_pretrained:False_datasetnum:final_finetune_lr_0.0001_dspmatch_True"
+    target_singers = "opencpop_female1"
+    trans_key = "audo"
 
-    # Check input arguments
-    os.environ["WORK_DIR"] = os.path.abspath(os.environ["WORK_DIR"])
-    os.putenv("WORK_DIR", os.environ["WORK_DIR"])
-
-    acoustics_dir = args.acoustics_dir
     os.putenv("ACOUSTICS_DIR", os.path.abspath(acoustics_dir))
     os.environ["ACOUSTICS_DIR"] = os.path.abspath(acoustics_dir)
 
-    vocoder_dir = args.vocoder_dir
     os.putenv("VOCODER_DIR", os.path.abspath(vocoder_dir))
     os.environ["VOCODER_DIR"] = os.path.abspath(vocoder_dir)
 
-    if args.audio_dir == "source_audio":
-        audio_dir = os.path.join(os.getenv("WORK_DIR"), "source_audio")
-        os.putenv("AUDIO_DIR", audio_dir)
-        os.environ["AUDIO_DIR"] = audio_dir
-        print(f"\nAudio directory not specified, using default:\n{audio_dir}\n")
-    else:
-        audio_dir = args.audio_dir
-        os.putenv("AUDIO_DIR", os.path.abspath(audio_dir))
-        os.environ["AUDIO_DIR"] = os.path.abspath(audio_dir)
-    if args.output_dir == "result":
-        output_dir = os.path.join(os.getenv("WORK_DIR"), "result")
-        os.putenv("OUTPUT_DIR", output_dir)
-        os.environ["OUTPUT_DIR"] = output_dir
-        print(f"\nOutput directory not specified, using default:\n{output_dir}\n")
-    else:
-        output_dir = args.output_dir
-        os.putenv("OUTPUT_DIR", os.path.abspath(output_dir))
-        os.environ["OUTPUT_DIR"] = os.path.abspath(output_dir)
+    os.putenv("AUDIO_DIR", audio_dir)
+    os.environ["AUDIO_DIR"] = audio_dir
+
+    os.putenv("WORK_DIR", work_dir)
+    os.environ["WORK_DIR"] = work_dir
+
+    os.putenv("OUTPUT_DIR", output_dir)
+    os.environ["OUTPUT_DIR"] = output_dir
 
     # Load config
     cfg = load_config(os.path.join(acoustics_dir, "checkpoints", "args.json"))
@@ -370,7 +360,7 @@ def prepare_acoustics_feature(cfg):
 
 
 @torch.no_grad()
-def prepare_content_feature(cfg):
+def prepare_content_feature(cfg, contentvec_extractor):
     temp_dir = os.getenv("TEMP_DIR")
 
     metadata_path = os.path.join(temp_dir, "metadata.json")
@@ -379,6 +369,7 @@ def prepare_content_feature(cfg):
 
     # Whisper
     if cfg.preprocess.extract_whisper_feature:
+        print("extract whisper feature")
         whisper_extractor = WhisperExtractor(cfg)
         whisper_extractor.load_model()
         os.makedirs(os.path.join(temp_dir, "whisper"), exist_ok=True)
@@ -412,8 +403,7 @@ def prepare_content_feature(cfg):
 
     # Contentvec
     if cfg.preprocess.extract_contentvec_feature:
-        contentvec_extractor = ContentvecExtractor(cfg)
-        contentvec_extractor.load_model()
+        print("extract contentvec feature")
         os.makedirs(os.path.join(temp_dir, "contentvec"), exist_ok=True)
 
         utt_batch = []
@@ -447,6 +437,7 @@ def prepare_content_feature(cfg):
 
     # Wenet
     if cfg.preprocess.extract_wenet_feature:
+        print("extract wenet feature")
         wenet_extractor = WenetExtractor(cfg)
         wenet_extractor.load_model()
         os.makedirs(os.path.join(temp_dir, "wenet"), exist_ok=True)
@@ -478,20 +469,9 @@ def prepare_content_feature(cfg):
 
 
 @torch.no_grad()
-def conversion(args, cfg):
+def conversion(args, cfg, inference):
     temp_dir = os.getenv("TEMP_DIR")
     os.makedirs(os.path.join(temp_dir, "pred"), exist_ok=True)
-
-    args.checkpoint_file = None
-    args.checkpoint_dir = os.path.join(os.getenv("ACOUSTICS_DIR"), "checkpoints")
-    args.checkpoint_dir_of_vocoder = None
-    args.checkpoint_file_of_vocoder = None
-    args.inference_mode = "pndm"
-
-    if cfg.model_type == "Transformer":
-        inference = TransformerInference(cfg, args)
-    elif cfg.model_type == "DiffSVC":
-        inference = DiffSVCInference(cfg, args)
 
     metadata_path = os.path.join(temp_dir, "metadata.json")
     with open(metadata_path, "r") as f:
@@ -499,7 +479,7 @@ def conversion(args, cfg):
 
     dataset = args.target_singers[0].split("_")[0]
     # TODO: support multiple target singers
-    singer = args.target_singers[0]
+    singer = args.target_singers
     data_dir = os.path.join(args.acoustics_dir, "singers.json")
     with open(data_dir, "r") as f:
         singers = json.load(f)
@@ -508,6 +488,7 @@ def conversion(args, cfg):
         "-" * 20,
         "\nConversion to {}...\n".format(singer),
     )
+    print("use singer:", singer)
     singer_id = singers[singer]
     target_dataset = singer.split("_")[0]
     if args.trans_key:
@@ -714,7 +695,7 @@ def conversion(args, cfg):
 
 # TODO: Auto shift pitch
 @torch.no_grad()
-def acoustics_pred2audio(vocoder_cfg, vocoder_ckpt):
+def acoustics_pred2audio(vocoder_cfg, vocoder_ckpt, vocoder):
     temp_dir = os.getenv("TEMP_DIR")
     os.makedirs(os.path.join(temp_dir, "audio_pred"), exist_ok=True)
     metadata_path = os.path.join(temp_dir, "metadata.json")
@@ -727,8 +708,10 @@ def acoustics_pred2audio(vocoder_cfg, vocoder_ckpt):
             uid = chunk["uid"]
             pred = torch.load(os.path.join(temp_dir, "pred", uid + ".pt"))
             acoustics_pred.append(pred)
+
+
     audios_pred = synthesis(
-        "bigvgan", vocoder_cfg, vocoder_ckpt, len(acoustics_pred), acoustics_pred
+        "bigvgan", vocoder, vocoder_cfg, vocoder_ckpt, len(acoustics_pred), acoustics_pred
     )
 
     i = 0
@@ -779,30 +762,34 @@ def generate_results():
         )
 
 
-if __name__ == "__main__":
-    # Parse arguments
-    args = build_parser().parse_args()
-    if args.trans_key[0] == "-" or args.trans_key.isdigit():
-        args.trans_key = int(args.trans_key)
-    # Parse config
-    cfg = args2config(args)
+def do_convert(contentvec_extractor, acoustic_inference, vocoder):
+    exp_name="zoulexiao_opencpop_DDPM_contentvec_conformer"
+    log_dir="/workspace2/lmxue/data/svc/"
+    acoustics_dir = log_dir + "/" + exp_name
+    vocoder_dir  = "/workspace2/lmxue/data/vocoder/resume_bigdata_mels_24000hz-audio_bigvgan_bigvgan_pretrained:False_datasetnum:final_finetune_lr_0.0001_dspmatch_True"
+    target_singers = "opencpop_female1"
+    trans_key = "audo"
+    work_dir = "/workspace2/yonghui/svc_data/work_dir"
+    audio_dir = "/workspace2/yonghui/svc_data/audio_dir"
+    output_dir = "/workspace2/yonghui/svc_data/output_dir"
 
+    cfg = args2config(work_dir, audio_dir, output_dir)
+    args = build_parser().parse_args()
+    args.acoustics_dir = acoustics_dir
+    args.target_singers = target_singers
+    args.trans_key  = trans_key
+    args.audio_dir  = audio_dir
+    args.output_dir  = output_dir
+
+    inference = acoustic_inference
     # Prepare metadata, aka. split audio and dump json
     prepare_metadata()
-
     # Prepare feature
     prepare_acoustics_feature(cfg)
-    prepare_content_feature(cfg)
-
+    prepare_content_feature(cfg, contentvec_extractor)
     # ASR conversion
-    conversion(args, cfg)
-    vocoder_cfg, vocoder_ckpt = parse_vocoder(args.vocoder_dir)
-    vocoder_cfg.preprocess = cfg.preprocess
-    vocoder_cfg.preprocess.hop_length = vocoder_cfg.preprocess.hop_size
-
-    # ASR representation to audio
-    acoustics_pred2audio(vocoder_cfg, vocoder_ckpt)
-
+    conversion(args, cfg, inference)
+    acoustics_pred2audio(vocoder_cfg, vocoder_ckpt, vocoder)
     # Save to file
     generate_results()
 
@@ -812,3 +799,48 @@ if __name__ == "__main__":
         print(f"\nRemoving cache files...")
         shutil.rmtree(temp_dir)
         print("Done!")
+
+def main():
+    exp_name="zoulexiao_opencpop_DDPM_contentvec_conformer"
+    log_dir="/workspace2/lmxue/data/svc/"
+    acoustics_dir = log_dir + "/" + exp_name
+    vocoder_dir  = "/workspace2/lmxue/data/vocoder/resume_bigdata_mels_24000hz-audio_bigvgan_bigvgan_pretrained:False_datasetnum:final_finetune_lr_0.0001_dspmatch_True"
+    target_singers = "opencpop_female1"
+    trans_key = "audo"
+    work_dir = "/workspace2/yonghui/svc_data/work_dir"
+    audio_dir = "/workspace2/yonghui/svc_data/audio_dir"
+    output_dir = "/workspace2/yonghui/svc_data/output_dir"
+    cfg = args2config(work_dir, audio_dir, output_dir)
+    # preload models
+    print("preload models")
+    print("preload contentvec extractor")
+    contentvec_extractor = ContentvecExtractor(cfg)
+    contentvec_extractor.load_model()
+    print("preload vocoder model")
+    vocoder_cfg, vocoder_ckpt = parse_vocoder(vocoder_dir)
+    vocoder_cfg.preprocess = cfg.preprocess
+    vocoder_cfg.preprocess.hop_length = vocoder_cfg.preprocess.hop_size
+    vocoder = load_nnvocoder(vocoder_cfg, "bigvgan", weights_file=vocoder_ckpt, from_multi_gpu=True)
+
+    print("preload acoustic model")
+    inference = None
+    args = build_parser().parse_args()
+    args.acoustics_dir = acoustics_dir
+    args.target_singers = target_singers
+    args.trans_key  = trans_key
+    args.audio_dir  = audio_dir
+    args.output_dir  = output_dir
+    args.checkpoint_file = None
+    args.checkpoint_dir = os.path.join(os.getenv("ACOUSTICS_DIR"), "checkpoints")
+    args.checkpoint_dir_of_vocoder = None
+    args.checkpoint_file_of_vocoder = None
+    args.inference_mode = "pndm"
+    if cfg.model_type == "Transformer":
+        inference = TransformerInference(cfg, args)
+    elif cfg.model_type == "DiffSVC":
+        inference = DiffSVCInference(cfg, args)
+    print("preload models finished")
+    do_convert(contentvec_extractor, inference, vocoder)
+
+if __name__ == "__main__":
+    main()

@@ -762,16 +762,17 @@ def generate_results():
         )
 
 
-def do_convert(contentvec_extractor, acoustic_inference, vocoder):
+def do_convert(contentvec_extractor, acoustic_inference, vocoder, vocoder_cfg, vocoder_ckpt, req_id, target_singers):
     exp_name="zoulexiao_opencpop_DDPM_contentvec_conformer"
     log_dir="/workspace2/lmxue/data/svc/"
     acoustics_dir = log_dir + "/" + exp_name
     vocoder_dir  = "/workspace2/lmxue/data/vocoder/resume_bigdata_mels_24000hz-audio_bigvgan_bigvgan_pretrained:False_datasetnum:final_finetune_lr_0.0001_dspmatch_True"
-    target_singers = "opencpop_female1"
+    target_singers = target_singers
     trans_key = "audo"
     work_dir = "/workspace2/yonghui/svc_data/work_dir"
-    audio_dir = "/workspace2/yonghui/svc_data/audio_dir"
-    output_dir = "/workspace2/yonghui/svc_data/output_dir"
+    audio_dir = "/workspace2/yonghui/svc_data/" + req_id + "/audio_dir"
+    output_dir = "/workspace2/yonghui/svc_data/" + req_id + "/output_dir"
+    f0_dir = "/workspace2/yonghui/svc_data/" + req_id + "/f0_dir"
 
     cfg = args2config(work_dir, audio_dir, output_dir)
     args = build_parser().parse_args()
@@ -794,11 +795,11 @@ def do_convert(contentvec_extractor, acoustic_inference, vocoder):
     generate_results()
 
     # Clean up
-    if not args.keep_cache:
-        temp_dir = os.getenv("TEMP_DIR")
-        print(f"\nRemoving cache files...")
-        shutil.rmtree(temp_dir)
-        print("Done!")
+    #if not args.keep_cache:
+    #    temp_dir = os.getenv("TEMP_DIR")
+    #    print(f"\nRemoving cache files...")
+    #    shutil.rmtree(temp_dir)
+    #    print("Done!")
 
 def main():
     exp_name="zoulexiao_opencpop_DDPM_contentvec_conformer"
@@ -840,7 +841,7 @@ def main():
     elif cfg.model_type == "DiffSVC":
         inference = DiffSVCInference(cfg, args)
     print("preload models finished")
-    do_convert(contentvec_extractor, inference, vocoder)
+    do_convert(contentvec_extractor, inference, vocoder, vocoder_cfg, vocoder_ckpt, "asdf34zx")
 
 if __name__ == "__main__":
     main()

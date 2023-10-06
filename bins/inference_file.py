@@ -202,17 +202,17 @@ def parse_vocoder(vocoder_dir):
     return vocoder_cfg, ckpt_path
 
 
-def prepare_metadata():
+def prepare_metadata(audio_dir, temp_dir):
     r"""Prepare metadata for inference"""
 
     # mkdir for temp(condition) files
-    temp_dir = os.path.join(os.getenv("OUTPUT_DIR"), ".temp")
+    #temp_dir = os.path.join(os.getenv("OUTPUT_DIR"), ".temp")
     os.makedirs(os.path.join(temp_dir, "audio"), exist_ok=True)
-    os.putenv("TEMP_DIR", temp_dir)
-    os.environ["TEMP_DIR"] = temp_dir
+    #os.putenv("TEMP_DIR", temp_dir)
+    #os.environ["TEMP_DIR"] = temp_dir
 
     # get source file list
-    audio_dir = os.getenv("AUDIO_DIR")
+    # audio_dir = os.getenv("AUDIO_DIR")
     # TODO: Support recursive search
     audio_list = [str(audio) for audio in Path(audio_dir).glob("*.wav")]
     audio_list += [str(audio) for audio in Path(audio_dir).glob("*.flac")]
@@ -262,8 +262,8 @@ def prepare_metadata():
 
 
 @torch.no_grad()
-def prepare_acoustics_feature(cfg):
-    temp_dir = os.getenv("TEMP_DIR")
+def prepare_acoustics_feature(cfg, temp_dir):
+    #Atemp_dir = os.getenv("TEMP_DIR")
 
     metadata_path = os.path.join(temp_dir, "metadata.json")
     with open(metadata_path, "r") as f:
@@ -360,8 +360,8 @@ def prepare_acoustics_feature(cfg):
 
 
 @torch.no_grad()
-def prepare_content_feature(cfg, contentvec_extractor):
-    temp_dir = os.getenv("TEMP_DIR")
+def prepare_content_feature(cfg, contentvec_extractor, temp_dir):
+    #temp_dir = os.getenv("TEMP_DIR")
 
     metadata_path = os.path.join(temp_dir, "metadata.json")
     with open(metadata_path, "r") as f:
@@ -469,8 +469,8 @@ def prepare_content_feature(cfg, contentvec_extractor):
 
 
 @torch.no_grad()
-def conversion(args, cfg, inference):
-    temp_dir = os.getenv("TEMP_DIR")
+def conversion(args, cfg, inference, temp_dir):
+    #temp_dir = os.getenv("TEMP_DIR")
     os.makedirs(os.path.join(temp_dir, "pred"), exist_ok=True)
 
     metadata_path = os.path.join(temp_dir, "metadata.json")
@@ -695,8 +695,8 @@ def conversion(args, cfg, inference):
 
 # TODO: Auto shift pitch
 @torch.no_grad()
-def acoustics_pred2audio(vocoder_cfg, vocoder_ckpt, vocoder):
-    temp_dir = os.getenv("TEMP_DIR")
+def acoustics_pred2audio(vocoder_cfg, vocoder_ckpt, vocoder, temp_dir):
+    #temp_dir = os.getenv("TEMP_DIR")
     os.makedirs(os.path.join(temp_dir, "audio_pred"), exist_ok=True)
     metadata_path = os.path.join(temp_dir, "metadata.json")
     with open(metadata_path, "r") as f:
@@ -731,9 +731,9 @@ def acoustics_pred2audio(vocoder_cfg, vocoder_ckpt, vocoder):
     assert i == len(audios_pred)
 
 
-def generate_results():
-    temp_dir = os.getenv("TEMP_DIR")
-    output_dir = os.getenv("OUTPUT_DIR")
+def generate_results(temp_dir, output_dir):
+    #temp_dir = os.getenv("TEMP_DIR")
+    #output_dir = os.getenv("OUTPUT_DIR")
     metadata_path = os.path.join(temp_dir, "metadata.json")
     with open(metadata_path, "r") as f:
         metadata = json.load(f)
@@ -762,7 +762,7 @@ def generate_results():
         )
 
 
-def do_convert(contentvec_extractor, acoustic_inference, vocoder, vocoder_cfg, vocoder_ckpt, req_id, target_singers):
+def do_convert(contentvec_extractor, acoustic_inference, vocoder, vocoder_cfg, vocoder_ckpt, wav_folder, target_singers):
     exp_name="zoulexiao_opencpop_DDPM_contentvec_conformer"
     log_dir="/workspace2/lmxue/data/svc/"
     acoustics_dir = log_dir + "/" + exp_name
@@ -770,9 +770,9 @@ def do_convert(contentvec_extractor, acoustic_inference, vocoder, vocoder_cfg, v
     target_singers = target_singers
     trans_key = "audo"
     work_dir = "/workspace2/yonghui/svc_data/work_dir"
-    audio_dir = "/workspace2/yonghui/svc_data/" + req_id + "/audio_dir"
-    output_dir = "/workspace2/yonghui/svc_data/" + req_id + "/output_dir"
-    f0_dir = "/workspace2/yonghui/svc_data/" + req_id + "/f0_dir"
+    audio_dir = wav_folder + "/audio_dir"
+    output_dir = wav_folder + "/output_dir"
+    temp_dir = wav_folder + "/temp_dir"
 
     cfg = args2config(work_dir, audio_dir, output_dir)
     args = build_parser().parse_args()
@@ -784,15 +784,15 @@ def do_convert(contentvec_extractor, acoustic_inference, vocoder, vocoder_cfg, v
 
     inference = acoustic_inference
     # Prepare metadata, aka. split audio and dump json
-    prepare_metadata()
+    prepare_metadata(audio_dir, temp_dir)
     # Prepare feature
-    prepare_acoustics_feature(cfg)
-    prepare_content_feature(cfg, contentvec_extractor)
+    prepare_acoustics_feature(cfg, temp_dir)
+    prepare_content_feature(cfg, contentvec_extractor, temp_dir)
     # ASR conversion
-    conversion(args, cfg, inference)
-    acoustics_pred2audio(vocoder_cfg, vocoder_ckpt, vocoder)
+    conversion(args, cfg, inference, temp_dir)
+    acoustics_pred2audio(vocoder_cfg, vocoder_ckpt, vocoder, temp_dir)
     # Save to file
-    generate_results()
+    generate_results(temp_dir, output_dir)
 
     # Clean up
     #if not args.keep_cache:
@@ -841,7 +841,8 @@ def main():
     elif cfg.model_type == "DiffSVC":
         inference = DiffSVCInference(cfg, args)
     print("preload models finished")
-    do_convert(contentvec_extractor, inference, vocoder, vocoder_cfg, vocoder_ckpt, "asdf34zx")
+    wav_folder = "/workspace2/yonghui/svc_data/asdf34zx"
+    do_convert(contentvec_extractor, inference, vocoder, vocoder_cfg, vocoder_ckpt, wav_folder)
 
 if __name__ == "__main__":
     main()
